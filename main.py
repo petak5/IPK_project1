@@ -6,6 +6,7 @@
 import sys
 import re
 from urllib.parse import urlparse
+from socket import *
 
 
 def main():
@@ -32,14 +33,31 @@ def main():
     else:
         invalidArguments()
 
+    # Validate nameserver address
     if not re.match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):[0-9]{1,5}$', nameserver):
         print("Invalid nameserver address.")
         exit(1)
 
+    # Validate filserver URL
     fileserverURL = urlparse(fileserver)
-    if fileserverURL.path == "" or fileserverURL.scheme != "fsp":
+    if fileserverURL.hostname == "" or fileserverURL.path == "" or fileserverURL.scheme != "fsp":
         print("Invalid fileserver URL.")
         exit(1)
+
+    # Ask nameserver for the IP of fileserver
+    clientSocket = socket(AF_INET, SOCK_DGRAM)
+    message = ('WHEREIS ' + fileserverURL.hostname).encode('unicode_escape')
+    nameserverAddress, nameserverPort = nameserver.split(':')
+    clientSocket.sendto(message, (nameserverAddress, int(nameserverPort)))
+    receivedMessage, fileserverAddress = clientSocket.recvfrom(2048)
+    clientSocket.close()
+
+    if not str(receivedMessage).startswith("b'OK"):
+        print("Failed to acquire fileserver address from DNS")
+        exit(1)
+
+    clientSocket = socket(AF_INET, SOCK_STREAM)
+    clientSocket.connect(fileserverAddress)
 
     print("NS: " + nameserver)
     print("FS: " + fileserver)
