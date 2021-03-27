@@ -1,3 +1,4 @@
+#!/usr/local/bin/python3
 # File: main.py
 # Date: 26. 3. 2021
 # Author: Peter Uroš (xurgos00)
