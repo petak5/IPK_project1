@@ -46,21 +46,51 @@ def main():
 
     # Ask nameserver for the IP of fileserver
     clientSocket = socket(AF_INET, SOCK_DGRAM)
-    message = ('WHEREIS ' + fileserverURL.hostname).encode('unicode_escape')
-    nameserverAddress, nameserverPort = nameserver.split(':')
-    clientSocket.sendto(message, (nameserverAddress, int(nameserverPort)))
-    receivedMessage, fileserverAddress = clientSocket.recvfrom(2048)
+    message = ('WHEREIS ' + fileserverURL.hostname).encode()
+    nameserverIP, nameserverPort = nameserver.split(':')
+    clientSocket.sendto(message, (nameserverIP, int(nameserverPort)))
+    receivedMessage, _ = clientSocket.recvfrom(2048)
     clientSocket.close()
 
     if not str(receivedMessage).startswith("b'OK"):
         print("Failed to acquire fileserver address from DNS")
         exit(1)
 
+    # Parse filserver IP and port from response
+    fileserverIPWithPort = str(receivedMessage)[5:-1].split(":")
+    fileserverAddress = (fileserverIPWithPort[0], int(fileserverIPWithPort[1]))
+
+    # Connect to fileserver
     clientSocket = socket(AF_INET, SOCK_STREAM)
     clientSocket.connect(fileserverAddress)
 
-    print("NS: " + nameserver)
-    print("FS: " + fileserver)
+    # Send request to fileserver
+    clientSocket.send(("GET " + fileserverURL.path + " FSP/1.0\r\n").encode())
+    clientSocket.send(("Hostname: " + fileserverURL.hostname + "\r\n").encode())
+    clientSocket.send(("Agent: xurgos00\r\n").encode())
+    clientSocket.send(("\r\n").encode())
+    # Receive response
+    response = bytearray()
+    while True:
+        r = clientSocket.recv(32)
+        if not r:
+            break
+        response.extend(r)
+
+    clientSocket.close()
+
+    response_str = str(response)[12:-2]
+    if not response_str.startswith("FSP/1.0 Success"):
+        print("Failed to receive file from fileserver")
+        exit(1)
+
+    # Get length of data segment
+    response_header = response_str.split("\\r\\n", 4)[0: -1]
+    response_data_length = int(response_header[1].split(":")[1])
+
+    # Write data to file
+    f = open("." + fileserverURL.path, "wb")
+    f.write(response[-response_data_length:])
 
 def invalidArguments():
     print("Invalid arguments.")
