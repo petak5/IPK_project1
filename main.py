@@ -3,6 +3,7 @@
 # Author: Peter Uroš (xurgos00)
 # Brief: IPK project 1
 
+import os
 import sys
 import re
 from urllib.parse import urlparse
@@ -46,6 +47,7 @@ def main():
 
     # Ask nameserver for the IP of fileserver
     clientSocket = socket(AF_INET, SOCK_DGRAM)
+    clientSocket.settimeout(5)
     message = ('WHEREIS ' + fileserverURL.hostname).encode()
     nameserverIP, nameserverPort = nameserver.split(':')
     clientSocket.sendto(message, (nameserverIP, int(nameserverPort)))
@@ -62,6 +64,7 @@ def main():
 
     # Connect to fileserver
     clientSocket = socket(AF_INET, SOCK_STREAM)
+    clientSocket.settimeout(10)
     clientSocket.connect(fileserverAddress)
 
     # Send request to fileserver
@@ -89,6 +92,7 @@ def main():
     response_data_length = int(response_header[1].split(":")[1])
 
     # Write data to file
+    os.makedirs(os.path.dirname("." + fileserverURL.path), exist_ok=True)
     f = open("." + fileserverURL.path, "wb")
     f.write(response[-response_data_length:])
 
