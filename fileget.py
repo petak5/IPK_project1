@@ -1,5 +1,5 @@
 #!/usr/local/bin/python3
-# File: main.py
+# File: fileget.py
 # Date: 26. 3. 2021
 # Author: Peter Uroš (xurgos00)
 # Brief: IPK project 1
