@@ -33,20 +33,13 @@ def main():
     # Ask nameserver for the IP of fileserver
     fileserverAddress = getFileserverAddress(nameserver, fileserverURL.hostname)
 
-    # Connect to fileserver
-    clientSocket = socket(AF_INET, SOCK_STREAM)
-    clientSocket.settimeout(10)
-    clientSocket.connect(fileserverAddress)
-
     # Receive file content
-    file_content = fileserverGetFileContents(clientSocket, fileserverURL.hostname, fileserverURL.path)
+    file_content = fileserverGetFileContents(fileserverAddress, fileserverURL.hostname, fileserverURL.path)
 
     # Write data to file
     os.makedirs(os.path.dirname("." + fileserverURL.path), exist_ok=True)
     f = open("." + fileserverURL.path, "wb")
     f.write(file_content)
-
-    clientSocket.close()
 
 
 """Argument nameserver contains nameserver IP and port separated with ":"
@@ -72,24 +65,35 @@ def getFileserverAddress(nameserver: str, fileserverHostname: str):
     return fileserverAddress
 
 
-"""Argument socket is client configured socket connected to fileserver
+"""Argument fileserverAddress is fileserver IP address and port
 Argument hostname is fileserver hostname
 Argument filePath is path to file on fileserver
 Returns bytearray containing file contents
 """
-def fileserverGetFileContents(socket: socket, hostname: str, filePath: str):
+def fileserverGetFileContents(fileserverAddress: tuple[str, int], hostname: str, filePath: str):
+    # Connect to fileserver
+    clientSocket = socket(AF_INET, SOCK_STREAM)
+    clientSocket.settimeout(10)
+    clientSocket.connect(fileserverAddress)
+
+    # Remove leading "/" because of "GET index" request
+    if filePath.startswith("/"):
+        filePath = filePath[1:]
+
     # Send request to fileserver
-    socket.send(("GET " + filePath + " FSP/1.0\r\n").encode())
-    socket.send(("Hostname: " + hostname + "\r\n").encode())
-    socket.send(("Agent: xurgos00\r\n").encode())
-    socket.send(("\r\n").encode())
+    clientSocket.send(("GET " + filePath + " FSP/1.0\r\n").encode())
+    clientSocket.send(("Hostname: " + hostname + "\r\n").encode())
+    clientSocket.send(("Agent: xurgos00\r\n").encode())
+    clientSocket.send(("\r\n").encode())
     # Receive response
     response = bytearray()
     while True:
-        r = socket.recv(32)
+        r = clientSocket.recv(32)
         if not r:
             break
         response.extend(r)
+
+    clientSocket.close()
 
     response_str = str(response)[12:-2]
     if not response_str.startswith("FSP/1.0 Success"):
