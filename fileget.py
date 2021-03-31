@@ -88,7 +88,7 @@ Argument hostname is fileserver hostname
 Argument filePath is path to file on fileserver
 Returns bytearray containing file contents
 """
-def fileserverGetFileContents(fileserverAddress: tuple[str, int], hostname: str, filePath: str):
+def fileserverGetFileContents(fileserverAddress: tuple, hostname: str, filePath: str):
     # Connect to fileserver
     clientSocket = socket(AF_INET, SOCK_STREAM)
     clientSocket.settimeout(10)
