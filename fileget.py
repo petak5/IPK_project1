@@ -33,13 +33,31 @@ def main():
     # Ask nameserver for the IP of fileserver
     fileserverAddress = getFileserverAddress(nameserver, fileserverURL.hostname)
 
-    # Receive file content
-    file_content = fileserverGetFileContents(fileserverAddress, fileserverURL.hostname, fileserverURL.path)
+    if fileserverURL.path.endswith("*"):
+        if not (fileserverURL.path == "/*" or fileserverURL.path == "*"):
+            print("GET ALL is supported only for the whole server.")
+            exit(1)
 
-    # Write data to file
-    os.makedirs(os.path.dirname("." + fileserverURL.path), exist_ok=True)
-    f = open("." + fileserverURL.path, "wb")
-    f.write(file_content)
+        # Receive index file content
+        index_file_content = fileserverGetFileContents(fileserverAddress, fileserverURL.hostname, "index")
+
+        # Receive all files from server
+        for filePath in index_file_content.decode().splitlines():
+            file_content = fileserverGetFileContents(fileserverAddress, fileserverURL.hostname, filePath)
+
+            # Write data to file
+            os.makedirs(os.path.dirname("./" + filePath), exist_ok=True)
+            f = open("./" + filePath, "wb")
+            f.write(file_content)
+            f.close()
+    else:
+        # Receive file content
+        file_content = fileserverGetFileContents(fileserverAddress, fileserverURL.hostname, fileserverURL.path)
+
+        # Write data to file
+        os.makedirs(os.path.dirname("." + fileserverURL.path), exist_ok=True)
+        f = open("." + fileserverURL.path, "wb")
+        f.write(file_content)
 
 
 """Argument nameserver contains nameserver IP and port separated with ":"
@@ -55,7 +73,7 @@ def getFileserverAddress(nameserver: str, fileserverHostname: str):
     clientSocket.close()
 
     if not str(receivedMessage).startswith("b'OK"):
-        print("Failed to acquire fileserver address from DNS")
+        print("Failed to acquire fileserver address from nameserver.")
         exit(1)
 
     # Parse filserver IP and port from response
@@ -97,7 +115,7 @@ def fileserverGetFileContents(fileserverAddress: tuple[str, int], hostname: str,
 
     response_str = str(response)[12:-2]
     if not response_str.startswith("FSP/1.0 Success"):
-        print("Failed to receive file from fileserver")
+        print("Failed to receive file from fileserver.")
         exit(1)
 
     # Get length of data segment
