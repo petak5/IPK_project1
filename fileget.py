@@ -83,7 +83,7 @@ def getFileserverAddress(nameserver: str, fileserverHostname: str):
     return fileserverAddress
 
 
-"""Argument fileserverAddress is fileserver IP address and port
+"""Argument fileserverAddress is fileserver IP address (string) and port (integer)
 Argument hostname is fileserver hostname
 Argument filePath is path to file on fileserver
 Returns bytearray containing file contents
